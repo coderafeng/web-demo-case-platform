@@ -1,0 +1,79 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: #f5f7fa;
+    color: #333;
+}
+
+#app {
+    min-height: 100vh;
+}
+
+/* 卡片通用样式 */
+.demo-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.demo-card:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+/* 标签样式 */
+.tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+
+/* 难度标签 */
+.difficulty-beginner {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.difficulty-intermediate {
+    background-color: #e3f2fd;
+    color: #1565c0;
+}
+
+.difficulty-advanced {
+    background-color: #fff3e0;
+    color: #ef6c00;
+}
+
+/* 分类标签 */
+.category-tag {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+}
+
+/* 布局工具类 */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.grid {
+    display: grid;
+    gap: 20px;
+}
