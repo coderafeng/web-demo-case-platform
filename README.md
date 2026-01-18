@@ -33,8 +33,29 @@
 
 ```text
 src/
+├── api/
+│   ├── index.ts              # API 总出口
+│   ├── http.ts               # Axios 配置
+│   ├── types.ts              # API 类型定义
+│   ├── demos.ts              # Demo API
+│   ├── categories.ts         # 分类 API
+│   ├── tags.ts               # 标签 API
+│   ├── classes.ts            # 班级 API
+│   ├── students.ts           # 学生 API
+│   └── mock/                 # 模拟数据
+│       ├── index.ts          # 模拟数据总出口
+│       ├── demos.ts          # Demo 模拟数据
+│       ├── categories.ts     # 分类模拟数据
+│       ├── tags.ts           # 标签模拟数据
+│       ├── classes.ts        # 班级模拟数据
+│       └── students.ts       # 学生模拟数据
 ├── components/ # 组件目录
+│   └── demos/                # 技术研究demo用例展示
+│       ├── TableMergeDemo.vue  # 分页查询列表，含有嵌套数组数据，渲染时部分单元格做合并操作
+│       ├── VirtualScrollDemo.vue  # 大数据量下的虚拟滚动列表优化方案，提升页面性能
 ├── views/ # 页面组件
+│   ├── DemoDetail.vue       # demo演示详情
+│   ├── Home.vue       # 主页面，每个卡片式容器代表一个demo用例（flex布局）
 ├── stores/ # Pinia状态管理
 ├── router/ # 路由配置
 ├── types/ # TypeScript类型定义

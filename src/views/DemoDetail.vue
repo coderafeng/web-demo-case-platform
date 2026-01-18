@@ -1,109 +1,3 @@
-<script setup lang="ts">
-import {ref, computed, onMounted, defineAsyncComponent} from 'vue'
-import {useRoute, useRouter} from 'vue-router'
-import {useDemoStore} from '@/stores/demo'
-import {ArrowLeft} from '@element-plus/icons-vue'
-import type {DemoItem} from '@/types/demo'
-
-const route = useRoute()
-const router = useRouter()
-const demoStore = useDemoStore()
-
-const showCode = ref(false)
-const running = ref(false)
-const demoCode = ref('')
-
-// 获取当前demo
-const demo = computed(() => {
-    const demoId = route.params.id as string
-    return demoStore.getDemoById(demoId)
-})
-
-// 动态加载Demo组件
-const currentDemoComponent = computed(() => {
-    if (!demo.value) return null
-    
-    const componentName = demo.value.component
-    return defineAsyncComponent(() =>
-            import(`@/components/demos/${componentName}.vue`)
-    )
-})
-
-// 获取相关demo（同分类）
-const relatedDemos = computed(() => {
-    if (!demo.value) return []
-    return demoStore.getDemosByCategory(demo.value.category)
-            .filter(d => d.id !== demo.value!.id)
-            .slice(0, 3)
-})
-
-// 运行demo
-const runDemo = async () => {
-    running.value = true
-    // 模拟运行过程
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    running.value = false
-    
-    // 这里可以执行demo特定的运行逻辑
-    console.log(`运行demo: ${demo.value?.title}`)
-}
-
-// 返回上一页
-const goBack = () => {
-    router.back()
-}
-
-// 跳转到其他demo
-const goToDemo = (id: string) => {
-    router.push(`/demo/${id}`)
-}
-
-// 获取难度对应的颜色类型
-const getDifficultyType = (difficulty?: string) => {
-    switch (difficulty) {
-        case '初级':
-            return 'success'
-        case '中级':
-            return 'warning'
-        case '高级':
-            return 'danger'
-        default:
-            return 'info'
-    }
-}
-
-// 获取难度对应的星数
-const getDifficultyStars = (difficulty?: string) => {
-    switch (difficulty) {
-        case '初级':
-            return 1
-        case '中级':
-            return 3
-        case '高级':
-            return 5
-        default:
-            return 0
-    }
-}
-
-// 格式化日期
-const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '未知'
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('zh-CN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    })
-}
-
-onMounted(() => {
-    if (!demo.value) {
-        router.replace('/')
-    }
-})
-</script>
-
 <template>
     <div class="demo-detail-page">
         <!-- 顶部导航栏 -->
@@ -116,125 +10,117 @@ onMounted(() => {
                             @click="goBack"
                             class="back-button"
                     >
-                        <el-icon>
-                            <ArrowLeft/>
-                        </el-icon>
+                        <el-icon><ArrowLeft /></el-icon>
                         返回
                     </el-button>
                     
                     <div class="nav-title">
-                        <h2>{{ demo?.title }}</h2>
+                        <h2>{{ demo?.title || '加载中...' }}</h2>
                         <div class="demo-meta">
                             <el-tag :type="getDifficultyType(demo?.difficulty)" size="small">
-                                {{ demo?.difficulty }}
+                                {{ getDifficultyText(demo?.difficulty) }}
                             </el-tag>
                             <el-tag type="primary" size="small">
-                                {{ demo?.category }}
+                                {{ getCategoryName(demo?.categoryId) }}
                             </el-tag>
                         </div>
                     </div>
                     
-                    <div class="nav-actions">
-                        <el-button type="primary" @click="runDemo" :loading="running">
-                            运行测试
-                        </el-button>
-                    </div>
+                    <!-- 删除顶部运行测试按钮，只保留占位div保持布局 -->
+                    <div class="nav-actions-placeholder"></div>
                 </div>
             </div>
         </nav>
         
         <!-- 内容区域 -->
         <div class="container detail-container">
-            <div class="detail-content">
-                <!-- Demo组件展示区域 -->
-                <div class="demo-area">
-                    <div class="demo-header">
-                        <h3>Demo演示</h3>
-                        <el-button
-                                type="text"
-                                @click="showCode = !showCode"
-                        >
-                            {{ showCode ? '隐藏代码' : '查看代码' }}
-                        </el-button>
-                    </div>
-                    
-                    <!-- 动态加载Demo组件 -->
-                    <div class="demo-component">
-                        <component
-                                :is="currentDemoComponent"
-                                v-if="currentDemoComponent && !showCode"
-                        />
-                        
-                        <!-- 代码展示 -->
-                        <div v-if="showCode" class="code-preview">
-                            <pre><code>{{ demoCode }}</code></pre>
-                        </div>
-                    </div>
+            <!-- 统一的信息卡片区域 -->
+            <div class="unified-info-card">
+                <div class="card-header">
+                    <h3 style="text-align: left;">Demo信息</h3>
                 </div>
                 
-                <!-- 右侧信息栏 -->
-                <div class="info-sidebar">
-                    <!-- Demo信息 -->
-                    <div class="info-card">
-                        <h4>Demo信息</h4>
-                        <div class="info-item">
-                            <span class="info-label">创建时间:</span>
-                            <span class="info-value">{{ formatDate(demo?.createdTime) }}</span>
+                <div class="card-content">
+                    <!-- Flex布局的基本信息行 -->
+                    <div class="basic-info-row">
+                        <!-- 标签 -->
+                        <div class="info-item tags-item">
+                            <span class="info-label">标签</span>
+                            <div class="tags-container">
+                                <el-tag
+                                        v-for="tag in getDemoTags(demo?.tagIds || [])"
+                                        :key="tag.id"
+                                        size="small"
+                                        class="info-tag"
+                                        :style="{
+                    backgroundColor: tag.color + '20',
+                    borderColor: tag.color,
+                    color: tag.color
+                  }"
+                                >
+                                    {{ tag.name }}
+                                </el-tag>
+                            </div>
                         </div>
-                        <div v-if="demo?.updatedTime" class="info-item">
-                            <span class="info-label">更新时间:</span>
-                            <span class="info-value">{{ formatDate(demo?.updatedTime) }}</span>
-                        </div>
+                        
+                        <!-- 难度等级 -->
                         <div class="info-item">
-                            <span class="info-label">难度等级:</span>
+                            <span class="info-label">难度等级</span>
                             <span class="info-value">
                 <el-rate
                         :model-value="getDifficultyStars(demo?.difficulty)"
                         disabled
-                        show-score
                         text-color="#ff9900"
+                        style="--el-rate-icon-size: 16px;"
                 />
               </span>
                         </div>
-                    </div>
-                    
-                    <!-- 标签 -->
-                    <div class="info-card">
-                        <h4>标签</h4>
-                        <div class="tags-container">
-                            <el-tag
-                                    v-for="tag in demo?.tags"
-                                    :key="tag"
-                                    size="small"
-                                    class="info-tag"
-                            >
-                                {{ tag }}
-                            </el-tag>
+                        
+                        <!-- 创建时间 -->
+                        <div class="info-item">
+                            <span class="info-label">创建时间</span>
+                            <span class="info-value">{{ formatDate(demo?.createdAt) }}</span>
+                        </div>
+                        
+                        <!-- 更新时间 -->
+                        <div v-if="demo?.updatedAt" class="info-item">
+                            <span class="info-label">更新时间</span>
+                            <span class="info-value">{{ formatDate(demo?.updatedAt) }}</span>
+                        </div>
+                        
+                        <!-- 作者 -->
+                        <div v-if="demo?.author" class="info-item">
+                            <span class="info-label">作者</span>
+                            <span class="info-value">{{ demo.author }}</span>
                         </div>
                     </div>
                     
-                    <!-- 描述 -->
-                    <div class="info-card">
-                        <h4>描述</h4>
-                        <p class="description">{{ demo?.description }}</p>
+                    <!-- 描述信息（与标题同一行） -->
+                    <div class="description-row">
+                        <span class="description-label">描述</span>
+                        <span class="description-content">
+              {{ demo?.description }}
+            </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Demo组件展示区域 -->
+            <div class="demo-main-area">
+                <div class="demo-area">
+                    <div class="demo-header">
+                        <h3 style="text-align: left;">Demo演示</h3>
                     </div>
                     
-                    <!-- 相关Demo -->
-                    <div class="info-card">
-                        <h4>相关Demo</h4>
-                        <div class="related-demos">
-                            <div
-                                    v-for="related in relatedDemos"
-                                    :key="related.id"
-                                    class="related-item"
-                                    @click="goToDemo(related.id)"
-                            >
-                                <span class="related-title">{{ related.title }}</span>
-                                <el-tag size="small" :type="getDifficultyType(related.difficulty)">
-                                    {{ related.difficulty }}
-                                </el-tag>
-                            </div>
+                    <!-- 动态加载Demo组件 -->
+                    <div class="demo-component">
+                        <div v-if="!currentDemoComponent" class="loading-component">
+                            <el-skeleton :rows="5" animated />
                         </div>
+                        <component
+                                v-else-if="currentDemoComponent"
+                                :is="currentDemoComponent"
+                        />
                     </div>
                 </div>
             </div>
@@ -242,10 +128,118 @@ onMounted(() => {
     </div>
 </template>
 
+<script setup lang="ts">
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useDemoStore } from '@/stores/demo'
+import { ArrowLeft } from '@element-plus/icons-vue'
+import type { Demo } from '@/api/types'
+
+const route = useRoute()
+const router = useRouter()
+const demoStore = useDemoStore()
+
+const loading = ref(false)
+
+// 获取当前demo
+const demo = computed(() => {
+    return demoStore.currentDemo
+})
+
+// 动态加载Demo组件
+const currentDemoComponent = computed(() => {
+    if (!demo.value) return null
+    
+    const componentName = demo.value.component
+    if (!componentName) return null
+    
+    try {
+        return defineAsyncComponent(() =>
+                import(`@/components/demos/${componentName}.vue`)
+        )
+    } catch (error) {
+        console.error('加载组件失败:', error)
+        return null
+    }
+})
+
+// 获取难度对应的颜色类型
+const getDifficultyType = (difficulty?: string) => {
+    switch (difficulty) {
+        case 'beginner': return 'success'
+        case 'intermediate': return 'warning'
+        case 'advanced': return 'danger'
+        default: return 'info'
+    }
+}
+
+// 获取难度对应的星数
+const getDifficultyStars = (difficulty?: string) => {
+    switch (difficulty) {
+        case 'beginner': return 1
+        case 'intermediate': return 3
+        case 'advanced': return 5
+        default: return 0
+    }
+}
+
+// 获取难度文本
+const getDifficultyText = (difficulty?: string) => {
+    const map: Record<string, string> = {
+        'beginner': '初级',
+        'intermediate': '中级',
+        'advanced': '高级'
+    }
+    return map[difficulty || ''] || difficulty || '未知'
+}
+
+// 获取分类名称
+const getCategoryName = (categoryId?: string) => {
+    if (!categoryId) return '未知'
+    const category = demoStore.categories.find(cat => cat.id === categoryId)
+    return category?.name || '未知分类'
+}
+
+// 获取demo的标签
+const getDemoTags = (tagIds: string[]) => {
+    return demoStore.tags.filter(tag => tagIds.includes(tag.id))
+}
+
+// 格式化日期
+const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '未知'
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).replace(/\//g, '-')
+}
+
+// 返回上一页
+const goBack = () => {
+    router.back()
+}
+
+onMounted(async () => {
+    loading.value = true
+    try {
+        const demoId = route.params.id as string
+        if (demoId) {
+            await demoStore.fetchDemoById(demoId)
+        }
+    } catch (error) {
+        console.error('加载demo详情失败:', error)
+    } finally {
+        loading.value = false
+    }
+})
+</script>
+
 <style scoped>
 .demo-detail-page {
     min-height: 100vh;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background: #f5f7fa;
 }
 
 .detail-nav {
@@ -261,22 +255,31 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding: 0 20px;
+    max-width: 1600px;
+    margin: 0 auto;
 }
 
 .back-button {
     color: #409EFF;
     font-size: 14px;
+    min-width: 60px; /* 给返回按钮固定宽度，保持标题居中 */
 }
 
+/* 修改标题居中方式 */
 .nav-title {
-    text-align: center;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 .nav-title h2 {
     margin: 0 0 8px 0;
     font-size: 24px;
     color: #333;
+    text-align: center;
 }
 
 .demo-meta {
@@ -285,94 +288,78 @@ onMounted(() => {
     gap: 8px;
 }
 
+/* 占位div，保持三栏布局平衡 */
+.nav-actions-placeholder {
+    min-width: 60px; /* 与返回按钮宽度一致，保持标题居中 */
+}
+
 .detail-container {
-    padding: 30px 0;
+    padding: 30px 20px;
+    max-width: 1600px;
+    margin: 0 auto;
 }
 
-.detail-content {
-    display: grid;
-    grid-template-columns: 1fr 320px;
-    gap: 24px;
-}
-
-@media (max-width: 992px) {
-    .detail-content {
-        grid-template-columns: 1fr;
-    }
-}
-
-.demo-area {
+/* 统一的信息卡片 */
+.unified-info-card {
     background: white;
     border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 24px;
     overflow: hidden;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-.demo-header {
+.card-header {
     padding: 20px 24px;
     border-bottom: 1px solid #e4e7ed;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    background: #fafafa;
 }
 
-.demo-header h3 {
+.card-header h3 {
     margin: 0;
     font-size: 18px;
     color: #333;
+    font-weight: 600;
 }
 
-.demo-component {
+.card-content {
     padding: 24px;
-    min-height: 400px;
 }
 
-.code-preview {
-    background: #1e1e1e;
-    color: #d4d4d4;
-    padding: 20px;
-    border-radius: 8px;
-    overflow-x: auto;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.code-preview pre {
-    margin: 0;
-}
-
-.info-sidebar {
+/* 基本信息行 - Flex布局 */
+.basic-info-row {
     display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.info-card {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-}
-
-.info-card h4 {
-    margin: 0 0 16px 0;
-    font-size: 16px;
-    color: #333;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #e4e7ed;
+    flex-wrap: wrap;
+    gap: 32px;
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #f0f0f0;
 }
 
 .info-item {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
+    flex-direction: column;
+    min-width: 150px;
+}
+
+/* 标签项特殊处理 */
+.tags-item {
+    min-width: 0;
+    flex: 0 1 auto;
+}
+
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+    max-width: 300px;
 }
 
 .info-label {
-    font-size: 14px;
+    font-size: 13px;
     color: #666;
+    margin-bottom: 6px;
+    font-weight: 700;
 }
 
 .info-value {
@@ -381,54 +368,162 @@ onMounted(() => {
     font-weight: 500;
 }
 
-.tags-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
 .info-tag {
-    background: #f0f9ff;
-    border-color: #bae0ff;
-    color: #409EFF;
+    font-weight: 500;
+    border-width: 1px;
+    border-style: solid;
+    font-size: 12px;
+    padding: 2px 8px;
+    height: 24px;
+    line-height: 20px;
 }
 
-.description {
+/* 描述行（标签和内容同一行） */
+.description-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.description-label {
+    font-size: 13px;
+    color: #666;
+    font-weight: 600;
+    min-width: 40px;
+    line-height: 1.6;
+    padding-top: 2px;
+}
+
+.description-content {
     font-size: 14px;
     color: #666;
     line-height: 1.6;
-    margin: 0;
-}
-
-.related-demos {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.related-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background: #f8f9fa;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.related-item:hover {
-    background: #e9ecef;
-    transform: translateX(4px);
-}
-
-.related-title {
-    font-size: 14px;
-    color: #333;
     flex: 1;
-    margin-right: 12px;
+    margin: 0;
+    text-align: justify;
+}
+
+/* Demo主区域 */
+.demo-main-area {
+    background: white;
+    border-radius: 12px;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.demo-area {
+    width: 100%;
+}
+
+.demo-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e4e7ed;
+    background: white;
+}
+
+.demo-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #333;
+    font-weight: 600;
+}
+
+.demo-component {
+    padding: 24px;
+    min-height: 400px;
+    background: #fafafa;
+}
+
+.loading-component {
+    padding: 20px;
+}
+
+/* 响应式设计 */
+@media (max-width: 1024px) {
+    .basic-info-row {
+        gap: 24px;
+    }
+    
+    .info-item {
+        min-width: 120px;
+    }
+    
+    .tags-item {
+        min-width: 100%;
+        order: -1;
+    }
+}
+
+@media (max-width: 768px) {
+    .nav-content {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+    
+    .nav-title {
+        width: 100%;
+    }
+    
+    .nav-title h2 {
+        font-size: 20px;
+        text-align: center;
+    }
+    
+    .back-button {
+        align-self: flex-start;
+        margin-bottom: 8px;
+    }
+    
+    .nav-actions-placeholder {
+        display: none;
+    }
+    
+    .basic-info-row {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .info-item {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .tags-item {
+        min-width: auto;
+    }
+    
+    .description-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .description-label {
+        min-width: auto;
+    }
+    
+    .demo-header {
+        padding: 16px 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .detail-container {
+        padding: 20px 15px;
+    }
+    
+    .card-content,
+    .demo-component {
+        padding: 16px;
+    }
+    
+    .basic-info-row {
+        gap: 16px;
+    }
+    
+    .tags-container {
+        gap: 4px;
+    }
 }
 </style>

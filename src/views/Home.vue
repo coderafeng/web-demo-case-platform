@@ -1,96 +1,3 @@
-<script setup lang="ts">
-import {ref, computed, onMounted} from 'vue'
-import {useRouter} from 'vue-router'
-import {useDemoStore} from '@/stores/demo'
-import {Clock, Refresh, Search} from '@element-plus/icons-vue'
-import type {DemoItem} from '@/types/demo'
-
-const router = useRouter()
-const demoStore = useDemoStore()
-
-const searchKeyword = ref('')
-const selectedCategory = ref('')
-
-// 获取所有分类
-const categories = computed(() => {
-    const cats = new Set<string>()
-    demoStore.demoList.forEach(demo => {
-        cats.add(demo.category)
-    })
-    return Array.from(cats).map(cat => ({
-        value: cat,
-        label: cat
-    }))
-})
-
-// 获取最新创建时间
-const latestCreate = computed(() => {
-    const demosWithCreate = demoStore.demoList.filter(demo => demo.createdTime)
-    if (demosWithCreate.length === 0) return '暂无'
-    
-    const latest = demosWithCreate.reduce((latest, demo) => {
-        return new Date(demo.createdTime!) > new Date(latest) ? demo.createdTime! : latest
-    }, demosWithCreate[0].createdTime!)
-    
-    return formatDate(latest)
-})
-
-// 获取最新更新时间
-const latestUpdate = computed(() => {
-    const demosWithUpdate = demoStore.demoList.filter(demo => demo.updatedTime)
-    if (demosWithUpdate.length === 0) return '暂无'
-    
-    const latest = demosWithUpdate.reduce((latest, demo) => {
-        return new Date(demo.updatedTime!) > new Date(latest) ? demo.updatedTime! : latest
-    }, demosWithUpdate[0].updatedTime!)
-    
-    return formatDate(latest)
-})
-
-// 筛选后的demo列表
-const filteredDemos = computed(() => {
-    let demos = demoStore.demoList
-    
-    if (searchKeyword.value) {
-        demos = demoStore.searchDemos(searchKeyword.value)
-    }
-    
-    if (selectedCategory.value) {
-        demos = demos.filter(demo => demo.category === selectedCategory.value)
-    }
-    
-    return demos
-})
-
-// 搜索处理
-const handleSearch = () => {
-    // 搜索逻辑已通过computed自动处理
-}
-
-// 分类筛选
-const handleCategoryChange = () => {
-    // 筛选逻辑已通过computed自动处理
-}
-
-// 跳转到demo详情页
-const goToDemo = (id: string) => {
-    router.push(`/demo/${id}`)
-}
-
-// 格式化日期
-const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    // 获取月份和日期，确保两位数字
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${date.getFullYear()}-${month}-${day}`;
-}
-
-onMounted(() => {
-    // 可以在这里加载更多初始数据
-})
-</script>
-
 <template>
     <div class="home-page">
         <!-- 顶部导航 -->
@@ -107,9 +14,7 @@ onMounted(() => {
                                 clearable
                         >
                             <template #prefix>
-                                <el-icon>
-                                    <Search/>
-                                </el-icon>
+                                <el-icon><Search /></el-icon>
                             </template>
                         </el-input>
                         <el-select
@@ -121,9 +26,9 @@ onMounted(() => {
                         >
                             <el-option
                                     v-for="category in categories"
-                                    :key="category.value"
-                                    :label="category.label"
-                                    :value="category.value"
+                                    :key="category.id"
+                                    :label="category.name"
+                                    :value="category.id"
                             />
                         </el-select>
                     </div>
@@ -164,11 +69,13 @@ onMounted(() => {
                     >
                         <div class="card-header">
                             <h3 class="card-title">{{ demo.title }}</h3>
+                            <!-- 修复难度标签样式 -->
                             <el-tag
-                                    :class="`difficulty-${demo.difficulty}`"
                                     size="small"
+                                    :style="getDifficultyStyle(demo.difficulty)"
+                                    class="difficulty-tag"
                             >
-                                {{ demo.difficulty }}
+                                {{ getDifficultyText(demo.difficulty) }}
                             </el-tag>
                         </div>
                         
@@ -178,31 +85,42 @@ onMounted(() => {
                         
                         <div class="card-footer">
                             <div class="tags-container">
+                                <!-- 分类标签 -->
                                 <el-tag
-                                        type="primary"
                                         size="small"
                                         class="category-tag"
+                                        :style="{
+                    backgroundColor: getCategoryColor(demo.categoryId) + '20',
+                    borderColor: getCategoryColor(demo.categoryId),
+                    color: getCategoryColor(demo.categoryId)
+                  }"
                                 >
-                                    {{ demo.category }}
+                                    {{ getCategoryName(demo.categoryId) }}
                                 </el-tag>
+                                <!-- 修复普通标签样式 -->
                                 <el-tag
-                                        v-for="tag in demo.tags"
-                                        :key="tag"
+                                        v-for="tag in getTagObjects(demo.tagIds)"
+                                        :key="tag.id"
                                         size="small"
                                         class="tag-item"
+                                        :style="{
+                    backgroundColor: tag.color + '20',
+                    borderColor: tag.color,
+                    color: tag.color
+                  }"
                                 >
-                                    {{ tag }}
+                                    {{ tag.name }}
                                 </el-tag>
                             </div>
                             
                             <div class="meta-info">
                 <span class="create-time">
-                  <el-icon><Clock/></el-icon>
-                  {{ formatDate(demo.createdTime) }}
+                  <el-icon><Clock /></el-icon>
+                  {{ formatDate(demo.createdAt) }}
                 </span>
-                                <span v-if="demo.updatedTime" class="update-time">
-                  <el-icon><Refresh/></el-icon>
-                  更新于 {{ formatDate(demo.updatedTime) }}
+                                <span v-if="demo.updatedAt" class="update-time">
+                  <el-icon><Refresh /></el-icon>
+                  {{ formatDate(demo.updatedAt) }}
                 </span>
                             </div>
                         </div>
@@ -211,12 +129,191 @@ onMounted(() => {
                 
                 <!-- 空状态 -->
                 <div v-if="filteredDemos.length === 0" class="empty-state">
-                    <el-empty description="没有找到相关demo"/>
+                    <el-empty description="没有找到相关demo" />
+                </div>
+                
+                <!-- 加载状态 -->
+                <div v-if="loading && filteredDemos.length === 0" class="loading-state">
+                    <el-skeleton :rows="3" animated />
                 </div>
             </div>
         </main>
     </div>
 </template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useDemoStore } from '@/stores/demo'
+import { Search, Clock, Refresh } from '@element-plus/icons-vue'
+import type { Demo, Tag, Category } from '@/api/types'
+
+const router = useRouter()
+const demoStore = useDemoStore()
+
+const searchKeyword = ref('')
+const selectedCategory = ref('')
+const loading = ref(false)
+
+// 计算属性
+const demos = computed(() => demoStore.demos)
+const categories = computed(() => demoStore.categories)
+const tags = computed(() => demoStore.tags)
+
+// 获取最新创建时间
+const latestCreate = computed(() => {
+    const demosWithCreate = demos.value.filter(demo => demo.createdAt)
+    if (demosWithCreate.length === 0) return '暂无'
+    
+    const latest = demosWithCreate.reduce((latest, demo) => {
+        return new Date(demo.createdAt) > new Date(latest) ? demo.createdAt : latest
+    }, demosWithCreate[0].createdAt)
+    
+    return formatDate(latest)
+})
+
+// 获取最新更新时间
+const latestUpdate = computed(() => {
+    const demosWithUpdate = demos.value.filter(demo => demo.updatedAt)
+    if (demosWithUpdate.length === 0) return '暂无'
+    
+    const latest = demosWithUpdate.reduce((latest, demo) => {
+        return new Date(demo.updatedAt!) > new Date(latest) ? demo.updatedAt! : latest
+    }, demosWithUpdate[0].updatedAt!)
+    
+    return formatDate(latest)
+})
+
+// 筛选后的demo列表
+const filteredDemos = computed(() => {
+    let data = [...demos.value]
+    
+    if (searchKeyword.value) {
+        const keyword = searchKeyword.value.toLowerCase()
+        data = data.filter(demo =>
+                demo.title.toLowerCase().includes(keyword) ||
+                demo.description.toLowerCase().includes(keyword) ||
+                demo.tagIds.some(tagId => {
+                    const tag = tags.value.find(t => t.id === tagId)
+                    return tag?.name.toLowerCase().includes(keyword)
+                })
+        )
+    }
+    
+    if (selectedCategory.value) {
+        data = data.filter(demo => demo.categoryId === selectedCategory.value)
+    }
+    
+    return data
+})
+
+// 辅助方法：获取分类对象
+const getCategory = (categoryId: string): Category | undefined => {
+    return categories.value.find(cat => cat.id === categoryId)
+}
+
+// 辅助方法：获取分类名称
+const getCategoryName = (categoryId: string) => {
+    const category = getCategory(categoryId)
+    return category?.name || '未知分类'
+}
+
+// 辅助方法：获取分类颜色
+const getCategoryColor = (categoryId: string) => {
+    const category = getCategory(categoryId)
+    return category?.color || '#409EFF'
+}
+
+// 辅助方法：获取标签对象数组
+const getTagObjects = (tagIds: string[]): Tag[] => {
+    return tags.value.filter(tag => tagIds.includes(tag.id))
+}
+
+// 辅助方法：获取难度文本
+const getDifficultyText = (difficulty: string) => {
+    const map: Record<string, string> = {
+        'beginner': '初级',
+        'intermediate': '中级',
+        'advanced': '高级'
+    }
+    return map[difficulty] || difficulty
+}
+
+// 辅助方法：获取难度样式
+const getDifficultyStyle = (difficulty: string) => {
+    const styles: Record<string, { backgroundColor: string; borderColor: string; color: string }> = {
+        'beginner': {
+            backgroundColor: '#e8f5e9',
+            borderColor: '#2e7d32',
+            color: '#2e7d32'
+        },
+        'intermediate': {
+            backgroundColor: '#e3f2fd',
+            borderColor: '#1565c0',
+            color: '#1565c0'
+        },
+        'advanced': {
+            backgroundColor: '#fef0f0',     // Element Plus danger 类型的浅红色
+            borderColor: '#f56c6c',         // Element Plus danger 类型的红色
+            color: '#f56c6c'                // Element Plus danger 类型的红色
+        }
+    }
+    return styles[difficulty] || styles.beginner
+}
+
+// 搜索处理
+const handleSearch = () => {
+    // 搜索逻辑已通过computed自动处理
+}
+
+// 分类筛选
+const handleCategoryChange = () => {
+    // 筛选逻辑已通过computed自动处理
+}
+
+// 跳转到demo详情页
+const goToDemo = (id: string) => {
+    router.push(`/demo/${id}`)
+}
+
+// 格式化日期
+const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 0) {
+        return '今天'
+    } else if (diffDays === 1) {
+        return '昨天'
+    } else if (diffDays < 7) {
+        return `${diffDays}天前`
+    } else if (diffDays < 30) {
+        return `${Math.floor(diffDays / 7)}周前`
+    } else {
+        const month = (date.getMonth() + 1).toString().padStart(2, '0')
+        const day = date.getDate().toString().padStart(2, '0')
+        return `${date.getFullYear()}-${month}-${day}`
+    }
+}
+
+// 初始化数据
+onMounted(async () => {
+    loading.value = true
+    try {
+        await Promise.all([
+            demoStore.fetchDemos(),
+            demoStore.fetchCategories(),
+            demoStore.fetchTags()
+        ])
+    } catch (error) {
+        console.error('加载数据失败:', error)
+    } finally {
+        loading.value = false
+    }
+})
+</script>
 
 <style scoped>
 .home-page {
@@ -308,7 +405,7 @@ onMounted(() => {
     border: 1px solid #e4e7ed;
     display: flex;
     flex-direction: column;
-    height: 398px;
+    height: 266px;
 }
 
 .demo-card:hover {
@@ -333,41 +430,47 @@ onMounted(() => {
     flex: 1;
 }
 
+.difficulty-tag {
+    font-weight: 500;
+}
+
 .card-body {
     padding: 16px 20px;
     flex: 1;
 }
 
 .card-description {
-    font-size: 14px;
+    font-size: 16px;
     color: #666;
     line-height: 1.6;
+    text-align: left;
     margin: 0;
+    /* 多行文本截断 */
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
 .card-footer {
-    padding: 16px 20px;
+    padding: 10px 20px;
     border-top: 1px solid #f0f0f0;
     background: #fafafa;
-    height: 70px;
+    min-height: 48px;
 }
 
 .tags-container {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    min-height: 46px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
+.category-tag,
 .tag-item {
-    background: #f0f9ff;
-    border-color: #bae0ff;
-    color: #409EFF;
+    font-weight: 500;
+    border-width: 1px;
+    border-style: solid;
 }
 
 .meta-info {
@@ -391,6 +494,14 @@ onMounted(() => {
 .empty-state {
     padding: 60px 20px;
     text-align: center;
+    background: white;
+    border-radius: 8px;
+    grid-column: 1 / -1;
+}
+
+.loading-state {
+    grid-column: 1 / -1;
+    padding: 20px;
     background: white;
     border-radius: 8px;
 }
