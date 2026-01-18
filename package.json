@@ -1,36 +1,38 @@
 {
-  "name": "web-demo-case-platform",
-  "private": true,
-  "version": "1.0.0",
-  "description": "web技术研究演示案例平台",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@element-plus/icons-vue": "^2.3.2",
-    "axios": "^1.13.2",
-    "element-plus": "^2.13.1",
-    "pinia": "^3.0.4",
-    "vue": "^3.5.26",
-    "vue-router": "^4.6.4"
-  },
-  "devDependencies": {
-    "@types/node": "^24.10.8",
-    "@vitejs/plugin-vue": "^6.0.3",
-    "@vue/tsconfig": "^0.8.1",
-    "typescript": "~5.9.3",
-    "vite": "npm:rolldown-vite@7.3.1",
-    "vue-tsc": "^3.2.2"
-  },
-  "pnpm": {
-    "overrides": {
-      "vite": "npm:rolldown-vite@7.3.1"
+    "name": "web-demo-case-platform",
+    "private": true,
+    "version": "1.0.0",
+    "description": "web技术研究演示案例平台",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vue-tsc --noEmit && vite build",
+        "build:skip-type-check": "vite build",
+        "type-check": "vue-tsc --noEmit",
+        "preview": "vite preview"
     },
-    "onlyBuiltDependencies": [
-      "vue-demi"
-    ]
-  }
+    "dependencies": {
+        "@element-plus/icons-vue": "^2.3.2",
+        "axios": "^1.13.2",
+        "element-plus": "^2.13.1",
+        "pinia": "^3.0.4",
+        "vue": "^3.5.26",
+        "vue-router": "^4.6.4"
+    },
+    "devDependencies": {
+        "@types/node": "^24.10.8",
+        "@vitejs/plugin-vue": "^6.0.3",
+        "@vue/tsconfig": "^0.8.1",
+        "typescript": "~5.9.3",
+        "vite": "npm:rolldown-vite@7.3.1",
+        "vue-tsc": "^3.2.2"
+    },
+    "pnpm": {
+        "overrides": {
+            "vite": "npm:rolldown-vite@7.3.1"
+        },
+        "onlyBuiltDependencies": [
+            "vue-demi"
+        ]
+    }
 }
