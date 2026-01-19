@@ -10,7 +10,7 @@ export const mockDemos: Demo[] = [
         component: 'TableMergeDemo',
         difficulty: 'intermediate',
         createdAt: '2026-01-15',
-        updatedAt: '2026-01-17',
+        updatedAt: '2026-01-18',
         author: '系统管理员',
         views: 156,
         likes: 24
